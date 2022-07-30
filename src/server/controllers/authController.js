@@ -1,12 +1,16 @@
+
 const { Usuario } = require('../../database/models'),
       bcrypt = require('bcrypt'),
       crypto = require('crypto'),
       mailer = require('../../modules/mailer'),
       twilio = require('../../modules/twilio')
-     
+      jwt = require('jsonwebtoken')
 
-
-
+function generateToken(params={}){
+    return jwt.sign(params, process.env.JWT_SECRET, {
+        expiresIn: 86400,
+    })
+}
 
 
 module.exports = {
@@ -26,7 +30,10 @@ module.exports = {
 
             usuario.senha = undefined;
 
-            return res.status(201).send({ message: 'Usuario Criado Com Sucesso' });
+            return res.status(201).send({
+                 message: 'Usuario Criado Com Sucesso',
+                 token: generateToken({ id: usuario.id })
+            });
 
         } catch (err) {
 
@@ -57,7 +64,10 @@ module.exports = {
             usuario.senha_token_reset = undefined;
             usuario.senha_expira_reset = undefined;
 
-            res.status(200).send({usuario});
+            res.status(200).send({
+                usuario,
+                token: generateToken({ id: usuario.id })
+            });
 
         } catch (err) {
             return res.status(400).send({ message: 'Falha ao Logar' });
@@ -160,6 +170,24 @@ module.exports = {
         }catch(err) {
             res.status(400).send({ message: 'Erro Ao Alterar Senha, Tente Novamente'+ err });
         }
+    },
+
+    async GetUser(req, res){
+        
+        const id = req.userID
+
+        try {
+            const usuario = await Usuario.findByPk(id);
+            usuario.senha = undefined;
+            usuario.senha_token_reset = undefined;
+            usuario.senha_expira_reset = undefined;
+            usuario.is_admin = undefined
+
+            res.status(200).send(usuario)
+        } catch (err) {
+            res.status(400).send({ message: 'Erro ao buscar Usuario'+ err });
+        }
+        
     }
     
 }
